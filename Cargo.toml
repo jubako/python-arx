@@ -10,5 +10,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = "0.18.1"
-libarx = { path = "../arx/libarx" }
-jubako = { path = "../jubako" }
+arx = { git = "https://github.com/jubako/arx.git", package = "libarx" }
+jbk = { git = "https://github.com/jubako/jubako.git", package = "jubako" }

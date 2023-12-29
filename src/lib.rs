@@ -1,16 +1,17 @@
 use arx::CommonEntry;
-use jubako as jbk;
-use libarx as arx;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyUnicode;
-use std::path::PathBuf;
 
 #[pyclass]
 struct ContentAddress(jbk::ContentAddress);
 
 #[pyclass]
 struct Entry(arx::FullEntry);
+
+#[pyclass]
+#[derive(Clone)]
+struct PathBuf(arx::PathBuf);
 
 #[pymethods]
 impl Entry {
@@ -112,6 +113,20 @@ impl Entry {
             _ => Err(PyValueError::new_err("Not a link")),
         }
     }
+
+    fn first_child(&self) -> PyResult<u32> {
+        match &self.0 {
+            arx::Entry::Dir(range, _) => Ok(range.begin().into_u32()),
+            _ => Err(PyValueError::new_err("Not a dir")),
+        }
+    }
+
+    fn nb_children(&self) -> PyResult<u32> {
+        match &self.0 {
+            arx::Entry::Dir(range, _) => Ok(range.size().into_u32()),
+            _ => Err(PyValueError::new_err("Not a dir")),
+        }
+    }
 }
 
 #[pyclass(unsendable)]
@@ -128,7 +143,7 @@ impl std::ops::Deref for Arx {
 impl Arx {
     #[new]
     fn py_new(path: &PyUnicode) -> PyResult<Self> {
-        let path: PathBuf = path.extract()?;
+        let path: std::path::PathBuf = path.extract()?;
         match arx::Arx::new(path) {
             Ok(a) => Ok(Self(a)),
 
@@ -137,10 +152,8 @@ impl Arx {
     }
 
     fn get_entry(&self, path: &PyUnicode) -> PyResult<Entry> {
-        match self
-            .0
-            .get_entry::<arx::FullBuilder, PathBuf>(path.extract()?)
-        {
+        let path: PathBuf = path.extract()?;
+        match self.0.get_entry::<arx::FullBuilder>(&path.0) {
             Ok(e) => Ok(Entry(e)),
             Err(_) => Err(PyValueError::new_err("Cannot get entry")),
         }
